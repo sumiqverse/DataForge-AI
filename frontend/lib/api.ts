@@ -40,6 +40,27 @@ export async function getMe(token: string) {
   return res.json();
 }
 
+export async function getWorkspaces(token: string) {
+  const res = await fetch(`${API_BASE}/api/workspaces`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch workspaces");
+  return res.json();
+}
+
+export async function createWorkspace(token: string, name: string) {
+  const res = await fetch(`${API_BASE}/api/workspaces`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}` 
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error("Failed to create workspace");
+  return res.json();
+}
+
 export async function getProjects(token: string) {
   const res = await fetch(`${API_BASE}/api/projects/`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -74,7 +95,7 @@ export async function parseRequirement(token: string, projectId: number, prompt:
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      Authorization: "Bearer " 
+      Authorization: `Bearer ${token}` 
     },
     body: JSON.stringify({ project_id: projectId, prompt }),
   });
@@ -84,7 +105,7 @@ export async function parseRequirement(token: string, projectId: number, prompt:
 
 export async function getSources(token: string) {
   const res = await fetch(`${API_BASE}/api/sources/`, {
-    headers: { Authorization: "Bearer " },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Failed to fetch sources");
   return res.json();
@@ -95,7 +116,7 @@ export async function createSource(token: string, data: any) {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      Authorization: "Bearer " 
+      Authorization: `Bearer ${token}` 
     },
     body: JSON.stringify(data),
   });
@@ -108,7 +129,7 @@ export async function runWorkflow(token: string, projectId: number, requirement:
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      Authorization: "Bearer " 
+      Authorization: `Bearer ${token}` 
     },
     body: JSON.stringify(requirement),
   });

@@ -19,7 +19,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="The user with this email already exists in the system.",
         )
     hashed_password = security.get_password_hash(user_in.password)
-    db_user = models.User(email=user_in.email, hashed_password=hashed_password)
+    db_user = models.User(email=user_in.email, password_hash=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -34,7 +34,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=schemas.Token)
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not security.verify_password(form_data.password, user.hashed_password):
+    if not user or not security.verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

@@ -11,3 +11,4 @@ class Project(Base):
     workspace_id = Column(Integer, ForeignKey("workspaces.id"))
 
     workspace = relationship("Workspace", back_populates="projects")
+    tasks = relationship("Task", back_populates="project")

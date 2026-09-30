@@ -12,6 +12,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Builder API")
 
+
 origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
 
 app.add_middleware(

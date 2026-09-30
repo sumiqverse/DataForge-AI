@@ -1,62 +1,62 @@
-import os
 import json
 from pydantic import ValidationError
 from app.schemas.requirement import RequirementAnalysis
+from app.schemas.dataset import DatasetSchema
 from app.config import settings
 
-def analyze_requirement(prompt: str) -> RequirementAnalysis:
+def generate_schema(requirement: RequirementAnalysis) -> DatasetSchema:
     if not hasattr(settings, "GEMINI_API_KEY") or not settings.GEMINI_API_KEY:
-        return RequirementAnalysis(
-            intent="data_collection",
-            entity="internship",
-            description="Mock analysis due to missing API key",
-            filters={"domain": "AI/ML", "location": "Delhi NCR"},
-            requested_fields=["company", "role", "stipend", "deadline", "application_url"],
-            location="Delhi NCR",
-            constraints=[],
-            ambiguity_flags=["No API key provided, using mock data."]
-        )
+        raise ValueError("API key missing")
+        
+    system_instruction = (
+        "You are an expert data architect. Your task is to take a Requirement Analysis JSON "
+        "and generate a Dataset Schema to store the requested data.\n"
+        "Rules:\n"
+        "- Generate a list of fields.\n"
+        "- The 'type' must be one of: text, number, currency, date, url, boolean.\n"
+        "- Include 'normalization_rule' and 'validation_rule' where applicable.\n"
+        "- Use snake_case for the 'name' field.\n"
+        "- Output MUST match the provided JSON schema EXACTLY."
+    )
+    
+    prompt = f"Requirement Analysis:\n{requirement.model_dump_json() if hasattr(requirement, 'model_dump_json') else requirement.json()}"
     
     try:
         from google import genai
         from google.genai import types
         
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        
-        system_instruction = (
-            "You are an expert natural language requirement analyzer for a data platform. "
-            "Your job is to read user prompts and extract structured requirements."
-        )
-        
         response = client.models.generate_content(
             model='gemini-3.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
-                response_schema=RequirementAnalysis,
+                response_schema=DatasetSchema,
                 temperature=0.0
             ),
         )
-        
         data = json.loads(response.text)
-        return RequirementAnalysis(**data)
+        return DatasetSchema(**data)
         
     except ImportError:
         import google.generativeai as old_genai
         old_genai.configure(api_key=settings.GEMINI_API_KEY)
         
         model = old_genai.GenerativeModel(
-            'gemini-3.5-flash', 
+            'gemini-3.5-flash',
             generation_config={"response_mime_type": "application/json"}
         )
-        system_instruction = (
-            "You are an expert natural language requirement analyzer for a data platform. "
-            "Extract structured requirements exactly matching this JSON schema:\n"
-            + (json.dumps(RequirementAnalysis.model_json_schema()) if hasattr(RequirementAnalysis, "model_json_schema") else RequirementAnalysis.schema_json())
+        
+        # In Pydantic v2 use model_json_schema, in v1 use schema_json
+        schema_def = json.dumps(DatasetSchema.model_json_schema()) if hasattr(DatasetSchema, "model_json_schema") else DatasetSchema.schema_json()
+        
+        full_prompt = (
+            f"{system_instruction}\n"
+            f"JSON Schema:\n{schema_def}\n\n"
+            f"{prompt}"
         )
         
-        full_prompt = f"{system_instruction}\n\nUser Prompt: {prompt}"
         try:
             response = model.generate_content(full_prompt)
         except Exception as e:
@@ -65,7 +65,7 @@ def analyze_requirement(prompt: str) -> RequirementAnalysis:
                 response = model.generate_content(full_prompt)
             else:
                 raise e
-        
+                
         try:
             text = response.text
             if text.startswith("```json"):
@@ -73,9 +73,9 @@ def analyze_requirement(prompt: str) -> RequirementAnalysis:
             if text.endswith("```"):
                 text = text[:-3]
             data = json.loads(text.strip())
-            return RequirementAnalysis(**data)
+            return DatasetSchema(**data)
         except (json.JSONDecodeError, ValidationError) as e:
-            raise ValueError(f"Failed to parse LLM response into structured JSON: {e}")
+            raise ValueError(f"Failed to parse LLM response into valid DatasetSchema: {e}")
             
     except Exception as e:
-        raise RuntimeError(f"Requirement analysis failed: {str(e)}")
+        raise RuntimeError(f"Schema generation failed: {str(e)}")

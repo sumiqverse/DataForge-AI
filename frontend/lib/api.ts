@@ -8,6 +8,21 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function generateSchema(token: string, requirement: any) {
+  const res = await fetch(`${API_BASE}/api/schemas/generate`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}` 
+    },
+    body: JSON.stringify(requirement),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to generate schema");
+  }
+  return res.json();
+}
 export async function login(username: string, password: string) {
   const formData = new URLSearchParams();
   formData.append("username", username);

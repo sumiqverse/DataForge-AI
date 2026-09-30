@@ -56,9 +56,14 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold">Your Workspaces</h1>
           <p className="text-zinc-500 text-sm mt-1">Logged in as {userEmail}</p>
         </div>
-        <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition">
-          Logout
-        </button>
+        <div className="flex gap-4">
+          <button onClick={() => router.push("/requirements")} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition">
+            New Requirement Engine &rarr;
+          </button>
+          <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition">
+            Logout
+          </button>
+        </div>
       </div>
       
       <form onSubmit={handleCreate} className="mb-8 flex gap-4">

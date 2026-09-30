@@ -136,3 +136,19 @@ export async function runWorkflow(token: string, projectId: number, requirement:
   if (!res.ok) throw new Error("Failed to run workflow");
   return res.json();
 }
+
+export async function analyzeRequirement(token: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/api/requirements/analyze`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}` 
+    },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to analyze requirement");
+  }
+  return res.json();
+}

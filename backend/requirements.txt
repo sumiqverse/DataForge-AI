@@ -10,7 +10,7 @@ httpx
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
-google-generativeai
+google-genai
 
 httpx
 beautifulsoup4

@@ -10,6 +10,13 @@ from app import models
 # Create tables
 Base.metadata.create_all(bind=engine)
 
+# Quick migration for tasks table
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE tasks ADD COLUMN metadata_snapshot JSON"))
+except Exception as e:
+    pass  # Column likely already exists
+
 app = FastAPI(title="AI Builder API")
 
 
@@ -39,3 +46,4 @@ def health_check(db: Session = Depends(get_db)):
       "status": "ok",
       "service": "dataforge-api"
     }
+

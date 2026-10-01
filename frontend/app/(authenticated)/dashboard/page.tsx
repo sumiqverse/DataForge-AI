@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getWorkspaces, createWorkspace, getMe } from "@/lib/api";
+import { getProjects, createProject, getMe } from "@/lib/api";
 
 export default function Dashboard() {
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [newProjectName, setNewProjectName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
 
@@ -15,8 +15,8 @@ export default function Dashboard() {
       try {
         const user = await getMe(token);
         setUserEmail(user.email);
-        const data = await getWorkspaces(token);
-        setWorkspaces(data);
+        const data = await getProjects(token);
+        setProjects(data);
       } catch (err) {
         localStorage.removeItem("token");
         router.push("/login");
@@ -33,13 +33,13 @@ export default function Dashboard() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    if (token && newWorkspaceName.trim()) {
+    if (token && newProjectName.trim()) {
       try {
-        await createWorkspace(token, newWorkspaceName);
-        setNewWorkspaceName("");
+        await createProject(token, newProjectName);
+        setNewProjectName("");
         loadData();
       } catch (err) {
-        alert("Failed to create workspace");
+        alert("Failed to create project");
       }
     }
   };
@@ -53,7 +53,7 @@ export default function Dashboard() {
     <div className="p-8 min-h-screen bg-white dark:bg-black text-black dark:text-white">
       <div className="flex justify-between items-center mb-8 border-b pb-4 dark:border-zinc-800">
         <div>
-          <h1 className="text-3xl font-bold">Your Workspaces</h1>
+          <h1 className="text-3xl font-bold">Your Projects</h1>
           <p className="text-zinc-500 text-sm mt-1">Logged in as {userEmail}</p>
         </div>
         <div className="flex gap-4">
@@ -69,28 +69,32 @@ export default function Dashboard() {
       <form onSubmit={handleCreate} className="mb-8 flex gap-4">
         <input 
           type="text" 
-          value={newWorkspaceName}
-          onChange={e => setNewWorkspaceName(e.target.value)}
-          placeholder="New Workspace Name"
+          value={newProjectName}
+          onChange={e => setNewProjectName(e.target.value)}
+          placeholder="New Project Name"
           className="border p-2 rounded bg-transparent dark:border-zinc-800 flex-1 max-w-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
         <button type="submit" className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded font-medium hover:opacity-90 transition">
-          Create Workspace
+          Create Project
         </button>
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {workspaces.map(w => (
-          <div key={w.id} className="p-6 border rounded-xl hover:shadow-lg transition cursor-pointer bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500">
-            <h2 className="text-xl font-semibold mb-2">{w.name}</h2>
-            <p className="text-sm text-zinc-500 mb-4">ID: {w.id}</p>
-            <button className="text-sm bg-blue-500 text-white px-3 py-1 rounded">Enter Workspace &rarr;</button>
+        {projects.map(p => (
+          <div 
+            key={p.id} 
+            onClick={() => router.push('/dashboard/project/' + p.id)}
+            className="p-6 border rounded-xl hover:shadow-lg transition cursor-pointer bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500"
+          >
+            <h2 className="text-xl font-semibold mb-2">{p.name}</h2>
+            <p className="text-sm text-zinc-500 mb-4">Project ID: {p.id}</p>
+            <button className="text-sm bg-blue-500 text-white px-3 py-1 rounded">Enter Project &rarr;</button>
           </div>
         ))}
-        {workspaces.length === 0 && (
+        {projects.length === 0 && (
           <div className="col-span-full text-zinc-500 p-8 border border-dashed rounded-xl text-center">
-            No workspaces found. Create one to get started!
+            No projects found. Create one to get started!
           </div>
         )}
       </div>

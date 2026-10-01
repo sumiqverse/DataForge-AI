@@ -12,3 +12,4 @@ class Project(Base):
 
     workspace = relationship("Workspace", back_populates="projects")
     tasks = relationship("Task", back_populates="project")
+    datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")

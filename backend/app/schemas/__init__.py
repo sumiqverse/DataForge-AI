@@ -6,3 +6,8 @@ from .source import SourceCreate, SourceResponse, SourceUpdate, SourceMatchReque
 
 from .task import TaskBase, TaskResponse
 from .workflow import WorkflowPlan, WorkflowPlanRequest, WorkflowStep
+from .collection import RawDocument
+from .extraction import ExtractedRecord
+from .validation import ValidationResult, ValidationError
+from .deduplication import DuplicateCluster
+from .provenance import RecordProvenance, FieldProvenance, DatasetRecordWithProvenance

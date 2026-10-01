@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from app.schemas.workflow import WorkflowPlanRequest, WorkflowPlan, WorkflowStep
 
 def plan_workflow(request: WorkflowPlanRequest, db: Session, current_user) -> WorkflowPlan:
-    from app.services.ai_service import genai, settings
+    from app.services.ai_service import get_client
+    from app.config import settings
     from app import models
     
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
@@ -26,35 +27,19 @@ def plan_workflow(request: WorkflowPlanRequest, db: Session, current_user) -> Wo
     req_fields = [f.get("name", "") for f in request.dataset_schema]
     matched = []
     for src in request.available_sources:
-        src_fields = set(src.get("supported_fields", []))
+        # The frontend payload provides matched_fields, while our unit tests use supported_fields
+        src_fields = set(src.get("matched_fields", src.get("supported_fields", [])))
         if any(rf in src_fields for rf in req_fields):
             matched.append(src)
             
     if not matched:
         raise ValueError("No enabled compatible sources are available for this workflow.")
     
-    if not hasattr(settings, "GEMINI_API_KEY") or not settings.GEMINI_API_KEY:
-        # Fallback if no API key
-        steps = []
-        steps.append(WorkflowStep(type="source_selection", source_id=matched[0].get("id")))
-        steps.append(WorkflowStep(type="collect", source_id=matched[0].get("id")))
+    try:
+        client = get_client()
+    except Exception as e:
+        raise ValueError("AI_PROVIDER_NOT_CONFIGURED: AI provider API key is not configured.")
         
-        steps.extend([
-            WorkflowStep(type="extract"),
-            WorkflowStep(type="normalize"),
-            WorkflowStep(type="validate"),
-            WorkflowStep(type="deduplicate"),
-            WorkflowStep(type="provenance"),
-            WorkflowStep(type="save_dataset")
-        ])
-        
-        return WorkflowPlan(
-            name=request.requirement_analysis.get("intent", "Data Collection Workflow"),
-            steps=steps
-        )
-        
-    model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
-    
     prompt = f"""
     You are a Data Engineering AI. Your task is to plan a structured data collection and processing workflow.
     
@@ -81,7 +66,14 @@ def plan_workflow(request: WorkflowPlanRequest, db: Session, current_user) -> Wo
     """
     
     try:
-        res = model.generate_content(prompt)
+        from google.genai import types
+        res = client.models.generate_content(
+            model='gemini-3.8-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            )
+        )
         plan_data = json.loads(res.text)
         
         # Validate against schema
@@ -98,22 +90,4 @@ def plan_workflow(request: WorkflowPlanRequest, db: Session, current_user) -> Wo
         raise
     except Exception as e:
         print(f"Error planning workflow: {e}")
-        # Fallback plan on error
-        steps = []
-        src_id = matched[0].get("id")
-        steps.append(WorkflowStep(type="source_selection", source_id=src_id))
-        steps.append(WorkflowStep(type="collect", source_id=src_id))
-        
-        steps.extend([
-            WorkflowStep(type="extract"),
-            WorkflowStep(type="normalize"),
-            WorkflowStep(type="validate"),
-            WorkflowStep(type="deduplicate"),
-            WorkflowStep(type="provenance"),
-            WorkflowStep(type="save_dataset")
-        ])
-        
-        return WorkflowPlan(
-            name=request.requirement_analysis.get("intent", "Data Collection Workflow"),
-            steps=steps
-        )
+        raise ValueError(f"AI_PROVIDER_ERROR: {str(e)}")

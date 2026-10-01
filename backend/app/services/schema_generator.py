@@ -27,7 +27,7 @@ def generate_schema(requirement: RequirementAnalysis) -> DatasetSchema:
         
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
         response = client.models.generate_content(
-            model='gemini-3.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -61,7 +61,7 @@ def generate_schema(requirement: RequirementAnalysis) -> DatasetSchema:
             response = model.generate_content(full_prompt)
         except Exception as e:
             if "404" in str(e) or "429" in str(e):
-                model = old_genai.GenerativeModel('gemini-3.5-flash-lite')
+                model = old_genai.GenerativeModel('gemini-3.8-flash-lite')
                 response = model.generate_content(full_prompt)
             else:
                 raise e

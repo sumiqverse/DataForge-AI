@@ -309,90 +309,92 @@ export default function ProjectDetails() {
                 {isRunning ? "[ RUNNING... ]" : "[ RUN PIPELINE ]"}
               </button>
               
-              {activeTask && (
-                <div className="mt-8 bg-zinc-950 p-6 rounded-xl border border-zinc-800">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold font-mono">Task #{activeTask.id?.toString().padStart(3, '0')}</h3>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-zinc-400 uppercase tracking-wider font-bold">Status:</span>
-                      <span className={`px-3 py-1 rounded text-sm font-bold ${
-                        activeTask.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' :
-                        activeTask.status === 'FAILED' ? 'bg-red-500/20 text-red-400' :
-                        'bg-blue-500/20 text-blue-400 animate-pulse'
-                      }`}>
-                        {activeTask.status}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {activeTask.steps?.map((step: any, idx: number) => {
 
-                      const isDone = step.status === 'completed';
-                      const isRunning = step.status === 'running';
-                      
-                      return (
-                        <div key={idx} className="flex items-center gap-3 text-sm font-mono">
-                          <span className="w-6 text-center">
-                            {isDone ? <span className="text-green-500">✓</span> : 
-                             isRunning ? <span className="text-blue-400 animate-spin inline-block">⟳</span> : 
-                             <span className="text-zinc-600">○</span>}
-                          </span>
-                          <span className={isDone ? 'text-zinc-300' : isRunning ? 'text-blue-400' : 'text-zinc-600'}>
-                            {step.step.replace(/^\d+_/, '')}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {results && Object.keys(results).length > 0 && (
-                <div className="mt-12 text-left bg-zinc-950 p-6 rounded-xl border border-zinc-800 shadow-inner overflow-hidden">
-                  <h3 className="text-xl font-bold mb-4 text-green-400">Pipeline Execution Logs</h3>
-                  {Object.keys(results).map((stepKey) => {
-                    const isFinal = stepKey.includes("deduplicate") || stepKey.includes("generate");
-                    if (isFinal && activeTask?.status === "COMPLETED") return null;
-                    
-                    return (
-                      <div key={stepKey} className={`mb-6 last:mb-0 bg-zinc-900 rounded-lg border border-zinc-800`}>
-                        <div className={`p-3 font-mono text-sm font-bold uppercase border-b bg-zinc-800 text-zinc-300 border-zinc-700`}>
-                          Step: {stepKey}
-                        </div>
-                        <div className="p-4">
-                          <pre className="text-xs text-zinc-400 overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(results[stepKey]?.slice(0, 5), null, 2)}
-                            {results[stepKey]?.length > 5 && `\n\n... and ${results[stepKey].length - 5} more records`}
-                          </pre>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {activeTask?.status === "COMPLETED" && results && (
-                <DatasetExplorer 
-                  datasetName={requirement?.entity || "Extracted Data"} 
-                  records={results[Object.keys(results).sort().reverse()[0]] || []} 
-                  taskId={activeTask.id}
-                  onEnrichStart={async () => {
-                    const token = localStorage.getItem("token");
-                    try {
-                      await fetch(`http://localhost:8000/api/workflow/task/${activeTask.id}/enrich`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${token}` }
-                      });
-                      setActiveTask(prev => ({ ...prev, status: "RUNNING" }));
-                    } catch (e) { console.error(e); }
-                  }}
-                />
-              )}
             </div>
           )}
 
         </div>
+      )}
+
+      {activeTask && (
+        <div className="mt-8 bg-zinc-950 p-6 rounded-xl border border-zinc-800">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold font-mono">Task #{activeTask.id?.toString().padStart(3, '0')}</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-zinc-400 uppercase tracking-wider font-bold">Status:</span>
+              <span className={`px-3 py-1 rounded text-sm font-bold ${
+                activeTask.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' :
+                activeTask.status === 'FAILED' ? 'bg-red-500/20 text-red-400' :
+                'bg-blue-500/20 text-blue-400 animate-pulse'
+              }`}>
+                {activeTask.status}
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {activeTask.steps?.map((step: any, idx: number) => {
+
+              const isDone = step.status === 'completed';
+              const isRunning = step.status === 'running';
+              
+              return (
+                <div key={idx} className="flex items-center gap-3 text-sm font-mono">
+                  <span className="w-6 text-center">
+                    {isDone ? <span className="text-green-500">✓</span> : 
+                     isRunning ? <span className="text-blue-400 animate-spin inline-block">⟳</span> : 
+                     <span className="text-zinc-600">○</span>}
+                  </span>
+                  <span className={isDone ? 'text-zinc-300' : isRunning ? 'text-blue-400' : 'text-zinc-600'}>
+                    {typeof step?.step === 'string' ? step.step.replace(/^\d+_/, '') : (step?.name || step?.type || JSON.stringify(step))}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {results && Object.keys(results).length > 0 && (
+        <div className="mt-12 text-left bg-zinc-950 p-6 rounded-xl border border-zinc-800 shadow-inner overflow-hidden">
+          <h3 className="text-xl font-bold mb-4 text-green-400">Pipeline Execution Logs</h3>
+          {Object.keys(results).map((stepKey) => {
+            const isFinal = stepKey.includes("deduplicate") || stepKey.includes("generate");
+            if (isFinal && activeTask?.status === "COMPLETED") return null;
+            
+            return (
+              <div key={stepKey} className={`mb-6 last:mb-0 bg-zinc-900 rounded-lg border border-zinc-800`}>
+                <div className={`p-3 font-mono text-sm font-bold uppercase border-b bg-zinc-800 text-zinc-300 border-zinc-700`}>
+                  Step: {stepKey}
+                </div>
+                <div className="p-4">
+                  <pre className="text-xs text-zinc-400 overflow-x-auto whitespace-pre-wrap">
+                    {JSON.stringify(Array.isArray(results[stepKey]) ? results[stepKey].slice(0, 5) : results[stepKey], null, 2)}
+                    {Array.isArray(results[stepKey]) && results[stepKey].length > 5 && `\n\n... and ${results[stepKey].length - 5} more records`}
+                  </pre>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTask?.status === "COMPLETED" && results && (
+        <DatasetExplorer 
+          datasetName={requirement?.entity || "Extracted Data"} 
+          records={Array.isArray(results[Object.keys(results).sort().reverse()[0]]) ? results[Object.keys(results).sort().reverse()[0]] : []} 
+          taskId={activeTask.id}
+          onEnrichStart={async () => {
+            const token = localStorage.getItem("token");
+            try {
+              await fetch(`http://localhost:8000/api/workflow/task/${activeTask.id}/enrich`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              setActiveTask(prev => ({ ...prev, status: "RUNNING" }));
+            } catch (e) { console.error(e); }
+          }}
+        />
       )}
       </div>
         

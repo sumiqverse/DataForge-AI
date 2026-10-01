@@ -5,8 +5,9 @@ from datetime import datetime
 class TaskBase(BaseModel):
     status: str
     steps: List[Dict[str, Any]]
-    logs: List[str]
+    logs: List[Any]
     results: Dict[str, Any]
+    metadata_snapshot: Optional[Dict[str, Any]] = None
 
 class TaskResponse(TaskBase):
     id: int

@@ -226,7 +226,7 @@ async def get_task_insights(task_id: int, db: Session = Depends(get_db)):
     if not hasattr(settings, "GEMINI_API_KEY") or not settings.GEMINI_API_KEY:
         return {"summary": "Dataset contains " + str(len(results[final_step_key])) + " records.", "anomalies": []}
         
-    model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+    model = genai.GenerativeModel('gemini-3.8-flash', generation_config={"response_mime_type": "application/json"})
     prompt = f"""
     You are an AI Data Analyst. Analyze the following dataset (sample of {len(records)} records).
     Provide:

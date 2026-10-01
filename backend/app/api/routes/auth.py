@@ -24,9 +24,14 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
 
-    # Auto-create workspace
+    # Auto-create workspace and default project
     workspace = models.Workspace(name="My Workspace", owner_id=db_user.id)
     db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+    
+    project = models.Project(name="Default Project", workspace_id=workspace.id)
+    db.add(project)
     db.commit()
 
     return db_user

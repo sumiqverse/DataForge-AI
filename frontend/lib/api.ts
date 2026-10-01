@@ -221,3 +221,135 @@ export async function planWorkflow(token: string, payload: any) {
   }
   return res.json();
 }
+
+export async function executeWorkflowPlan(token: string, plan: any) {
+  const res = await fetch(`${API_BASE}/api/workflows/execute`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(plan),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to execute workflow");
+  }
+  return res.json();
+}
+
+export async function createTask(token: string, payload: any) {
+  const res = await fetch(`${API_BASE}/api/tasks/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to create task");
+  }
+  return res.json();
+}
+
+export async function getTask(token: string, taskId: number) {
+  const res = await fetch(`${API_BASE}/api/tasks/${taskId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to get task");
+  return res.json();
+}
+
+export async function cancelTask(token: string, taskId: number) {
+  const res = await fetch(`${API_BASE}/api/tasks/${taskId}/cancel`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to cancel task");
+  return res.json();
+}
+
+export async function getRecordProvenance(token: string, recordId: string) {
+  const res = await fetch(`${API_BASE}/api/dataset-records/${recordId}/provenance`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to fetch provenance");
+  return res.json();
+}
+
+export async function getDatasets(token: string) {
+  const res = await fetch(`${API_BASE}/api/datasets/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to get datasets");
+  return res.json();
+}
+
+export async function getDataset(token: string, datasetId: string) {
+  const res = await fetch(`${API_BASE}/api/datasets/${datasetId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to get dataset");
+  return res.json();
+}
+
+export async function getDatasetRecords(
+  token: string, 
+  datasetId: string, 
+  page: number = 1, 
+  search: string = "",
+  sortBy: string = "",
+  sortOrder: string = "asc",
+  statusFilter: string = ""
+) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    page_size: "10",
+  });
+  if (search) params.append("search", search);
+  if (sortBy) params.append("sort_by", sortBy);
+  if (sortOrder) params.append("sort_order", sortOrder);
+  if (statusFilter) params.append("status_filter", statusFilter);
+  
+  const res = await fetch(`${API_BASE}/api/datasets/${datasetId}/records?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to get dataset records");
+  return res.json();
+}
+
+export async function getTasks(token: string) {
+  const res = await fetch(`${API_BASE}/api/tasks/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error("Failed to get tasks");
+  return res.json();
+}
+
+export async function createEnrichmentPlan(token: string, datasetId: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/api/ai/enrichment-plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ dataset_id: parseInt(datasetId), prompt })
+  });
+  if (!res.ok) throw new Error("Failed to generate enrichment plan");
+  return res.json();
+}
+
+export async function askDatasetIntelligence(token: string, datasetId: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/api/datasets/${datasetId}/intelligence/query`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ prompt })
+  });
+  if (!res.ok) throw new Error("Failed to process intelligence query");
+  return res.json();
+}

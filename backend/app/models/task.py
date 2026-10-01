@@ -12,6 +12,7 @@ class Task(Base):
     steps = Column(JSON, default=list)
     logs = Column(JSON, default=list)
     results = Column(JSON, default=dict)
+    metadata_snapshot = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

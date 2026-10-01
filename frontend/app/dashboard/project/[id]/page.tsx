@@ -393,8 +393,10 @@ export default function ProjectDetails() {
           )}
 
         </div>
+      )}
+      </div>
         
-        <div className="lg:col-span-1">
+      <div className="lg:col-span-1">
           <div className="bg-zinc-950 border border-zinc-800 p-6 rounded-xl sticky top-8">
             <h2 className="text-xl font-bold mb-4 uppercase tracking-wider text-zinc-400 border-b border-zinc-800 pb-2">Workflow History</h2>
             

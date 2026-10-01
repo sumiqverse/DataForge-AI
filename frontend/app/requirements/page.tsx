@@ -409,6 +409,24 @@ export default function RequirementsPage() {
                   ))}
                 </div>
               )}
+              
+              {!isMatchingSources && !matchError && compatibleSources.length > 0 && (
+                <div className="mt-8 flex justify-end">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem("workflowContext", JSON.stringify({
+                        requirement_analysis: result,
+                        dataset_schema: schema.fields,
+                        available_sources: compatibleSources
+                      }));
+                      router.push("/workflows");
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition text-lg shadow-sm flex items-center gap-2"
+                  >
+                    Generate Workflow Plan (Phase 5) &rarr;
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

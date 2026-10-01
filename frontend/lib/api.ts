@@ -205,3 +205,19 @@ export async function analyzeRequirement(token: string, prompt: string) {
   }
   return res.json();
 }
+
+export async function planWorkflow(token: string, payload: any) {
+  const res = await fetch(`${API_BASE}/api/workflows/plan`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to generate workflow plan");
+  }
+  return res.json();
+}

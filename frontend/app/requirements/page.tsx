@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { analyzeRequirement, generateSchema } from "@/lib/api";
+import { analyzeRequirement, generateSchema, matchSources } from "@/lib/api";
 
 export default function RequirementsPage() {
   const [prompt, setPrompt] = useState("");
@@ -11,6 +11,10 @@ export default function RequirementsPage() {
   const [schema, setSchema] = useState<any>(null);
   const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
   
+  const [compatibleSources, setCompatibleSources] = useState<any[]>([]);
+  const [isMatchingSources, setIsMatchingSources] = useState(false);
+  const [matchError, setMatchError] = useState("");
+
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -29,6 +33,8 @@ export default function RequirementsPage() {
     setError("");
     setResult(null);
     setSchema(null);
+    setCompatibleSources([]);
+    setMatchError("");
 
     try {
       const token = localStorage.getItem("token");
@@ -42,16 +48,37 @@ export default function RequirementsPage() {
     }
   };
 
+  const fetchCompatibleSources = async (schemaFields: any[]) => {
+    setIsMatchingSources(true);
+    setMatchError("");
+    setCompatibleSources([]);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token");
+      const fieldNames = schemaFields.map((f: any) => f.name);
+      const matched = await matchSources(token, fieldNames);
+      setCompatibleSources(matched);
+    } catch (err: any) {
+      setMatchError(err.message || "Failed to load compatible sources");
+    } finally {
+      setIsMatchingSources(false);
+    }
+  };
+
   const handleGenerateSchema = async () => {
     if (!result) return;
     setIsGeneratingSchema(true);
     setError("");
+    setCompatibleSources([]);
+    setMatchError("");
     
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token");
       const schemaData = await generateSchema(token, result);
       setSchema(schemaData);
+      // Automatically fetch compatible sources using the generated schema fields
+      await fetchCompatibleSources(schemaData.fields);
     } catch (err: any) {
       setError(err.message || "Failed to generate schema");
     } finally {
@@ -105,10 +132,10 @@ export default function RequirementsPage() {
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex flex-col gap-8 items-stretch">
           {/* Phase 2 Result */}
           {result && (
-            <div className="bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl p-8 shadow-sm flex-1 w-full lg:max-w-[45%]">
+            <div className="bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl p-8 shadow-sm w-full">
               <h2 className="text-2xl font-bold mb-6 pb-4 border-b dark:border-zinc-800">1. Analysis Result</h2>
               
               <div className="space-y-6">
@@ -199,7 +226,7 @@ export default function RequirementsPage() {
 
           {/* Phase 3 Schema Generation */}
           {schema && (
-            <div className="bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl p-8 shadow-sm flex-1 w-full overflow-x-auto">
+            <div className="bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl p-8 shadow-sm w-full overflow-x-auto">
               <h2 className="text-2xl font-bold mb-6 pb-4 border-b dark:border-zinc-800">2. Dataset Schema</h2>
               <p className="text-sm text-zinc-500 mb-6">Review and edit the generated schema fields below before proceeding.</p>
 
@@ -293,11 +320,95 @@ export default function RequirementsPage() {
                 <div className="text-center py-8 text-zinc-500 italic">No fields in schema.</div>
               )}
               
-              <div className="mt-8 pt-6 border-t dark:border-zinc-800 flex justify-end">
-                <button className="bg-black text-white dark:bg-white dark:text-black px-6 py-2 rounded font-medium hover:opacity-90 transition disabled:opacity-50" disabled>
-                  Generate Collection Engine (Phase 4) &rarr;
+              <div className="mt-8 pt-6 border-t dark:border-zinc-800 flex justify-between items-center">
+                <button 
+                  onClick={() => fetchCompatibleSources(schema.fields)}
+                  disabled={isMatchingSources || schema.fields.length === 0}
+                  className="text-sm bg-zinc-200 dark:bg-zinc-800 px-4 py-2 rounded font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition disabled:opacity-50"
+                >
+                  {isMatchingSources ? "Matching..." : "↻ Re-match Sources"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Phase 4: Compatible Sources */}
+          {schema && (
+            <div className="bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl p-8 shadow-sm w-full">
+              <h2 className="text-2xl font-bold mb-2 pb-4 border-b dark:border-zinc-800">3. Compatible Sources</h2>
+              <p className="text-sm text-zinc-500 mb-6">Sources available from your Source Registry that match the generated schema fields.</p>
+
+              {/* Loading state */}
+              {isMatchingSources && (
+                <div className="flex items-center gap-3 py-8 justify-center text-zinc-500">
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-lg">Finding compatible sources...</span>
+                </div>
+              )}
+
+              {/* Error state */}
+              {matchError && !isMatchingSources && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                  <span className="font-semibold">Error:</span> {matchError}
+                  <button 
+                    onClick={() => fetchCompatibleSources(schema.fields)} 
+                    className="ml-4 underline hover:no-underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!isMatchingSources && !matchError && compatibleSources.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="text-zinc-500 text-lg mb-2">No compatible enabled sources found.</div>
+                  <p className="text-sm text-zinc-400">Add or enable a source in <a href="/dashboard/sources" className="text-blue-500 underline hover:text-blue-600">Source Registry</a> that supports the requested fields.</p>
+                </div>
+              )}
+
+              {/* Results */}
+              {!isMatchingSources && !matchError && compatibleSources.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {compatibleSources.map((src: any) => (
+                    <div key={src.id} className="bg-white dark:bg-black border dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:border-blue-500 transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-bold text-lg flex items-center gap-2">
+                          <span className="text-green-500 text-xl">✓</span>
+                          {src.name}
+                        </h3>
+                        <span className="text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 uppercase tracking-wider font-semibold">{src.type}</span>
+                      </div>
+                      {src.base_url && (
+                        <p className="text-xs text-zinc-500 font-mono mb-4 truncate" title={src.base_url}>{src.base_url}</p>
+                      )}
+
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-2">Matched Fields</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {src.matched_fields.map((f: string, i: number) => (
+                            <span key={i} className="text-xs bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2.5 py-1 rounded font-medium border border-green-200 dark:border-green-800">✓ {f}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {src.missing_fields.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Missing Fields</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {src.missing_fields.map((f: string, i: number) => (
+                              <span key={i} className="text-xs bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 px-2.5 py-1 rounded font-medium border border-zinc-200 dark:border-zinc-700">{f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

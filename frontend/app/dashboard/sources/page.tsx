@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSources, createSource } from "@/lib/api";
+import { getSources, createSource, updateSource } from "@/lib/api";
 
 export default function SourcesPage() {
   const [sources, setSources] = useState<any[]>([]);
@@ -10,7 +10,7 @@ export default function SourcesPage() {
   const [type, setType] = useState("web");
   const [url, setUrl] = useState("");
   const [fields, setFields] = useState("");
-  const [method, setMethod] = useState("standard_web");
+  const [description, setDescription] = useState("");
 
   const loadSources = async () => {
     const token = localStorage.getItem("token");
@@ -28,16 +28,24 @@ export default function SourcesPage() {
     e.preventDefault();
     const token = localStorage.getItem("token");
     if (token) {
-      const supported_fields = fields.split(",").map(s => s.trim()).filter(Boolean);
+      const supported_fields = fields.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
       await createSource(token, {
         name,
         type,
-        url_or_api: url,
+        base_url: url,
         supported_fields,
-        extraction_method: method
+        description
       });
-      setName(""); setUrl(""); setFields("");
+      setName(""); setUrl(""); setFields(""); setDescription("");
       setIsCreating(false);
+      loadSources();
+    }
+  };
+
+  const toggleSourceStatus = async (sourceId: number, currentAllowed: boolean) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await updateSource(token, sourceId, { allowed: !currentAllowed });
       loadSources();
     }
   };
@@ -64,13 +72,9 @@ export default function SourcesPage() {
               <option value="api">API</option>
               <option value="dataset">Public Dataset</option>
             </select>
-            <input type="text" placeholder="URL or API Endpoint" value={url} onChange={e=>setUrl(e.target.value)} required className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" placeholder="Supported Fields (comma separated, e.g. company, role)" value={fields} onChange={e=>setFields(e.target.value)} required className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <select value={method} onChange={e=>setMethod(e.target.value)} className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="standard_web">Standard Web Scraper</option>
-              <option value="rest_api">REST API</option>
-              <option value="graphql">GraphQL</option>
-            </select>
+            <input type="text" placeholder="Base URL or API Endpoint" value={url} onChange={e=>setUrl(e.target.value)} required className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="text" placeholder="Supported Fields (comma or space separated, e.g. company_name website founder)" value={fields} onChange={e=>setFields(e.target.value)} required className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <textarea placeholder="Description (optional)" value={description} onChange={e=>setDescription(e.target.value)} className="border p-2 rounded dark:bg-zinc-800 col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-24" />
           </div>
           <button type="submit" className="bg-green-600 hover:bg-green-700 text-white p-2 rounded font-medium mt-2 transition">Save Source</button>
         </form>
@@ -78,16 +82,17 @@ export default function SourcesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sources.map(s => (
-          <div key={s.id} className="bg-white dark:bg-zinc-900 border dark:border-zinc-800 p-6 rounded-xl shadow-sm hover:border-blue-500 transition">
+          <div key={s.id} className="bg-white dark:bg-zinc-900 border dark:border-zinc-800 p-6 rounded-xl shadow-sm hover:border-blue-500 transition flex flex-col">
             <div className="flex justify-between items-start mb-4">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                {s.allowed && <span className="text-green-500 text-xl leading-none">✓</span>}
+                {s.allowed ? <span className="text-green-500 text-xl leading-none" title="Enabled">✓</span> : <span className="text-red-500 text-xl leading-none" title="Disabled">✗</span>}
                 {s.name}
               </h3>
               <span className="text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 uppercase tracking-wider font-semibold">{s.type}</span>
             </div>
-            <p className="text-sm text-zinc-500 mb-4 truncate font-mono" title={s.url_or_api}>{s.url_or_api}</p>
-            <div className="mb-4">
+            {s.description && <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">{s.description}</p>}
+            <p className="text-sm text-zinc-500 mb-4 truncate font-mono" title={s.base_url}>{s.base_url}</p>
+            <div className="mb-4 flex-grow">
               <div className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Supported Fields</div>
               <div className="flex flex-wrap gap-2">
                 {s.supported_fields.map((f: string, i: number) => (
@@ -97,8 +102,13 @@ export default function SourcesPage() {
                 ))}
               </div>
             </div>
-            <div className="text-xs text-zinc-500 border-t dark:border-zinc-800 pt-3">
-              Method: <span className="font-medium text-zinc-700 dark:text-zinc-300">{s.extraction_method}</span>
+            <div className="pt-4 mt-auto border-t dark:border-zinc-800">
+              <button 
+                onClick={() => toggleSourceStatus(s.id, s.allowed)}
+                className={`w-full py-2 rounded font-medium transition ${s.allowed ? 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40' : 'bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40'}`}
+              >
+                {s.allowed ? "Disable Source" : "Enable Source"}
+              </button>
             </div>
           </div>
         ))}

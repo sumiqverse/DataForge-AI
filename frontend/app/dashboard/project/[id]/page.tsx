@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getProject, parseRequirement } from "@/lib/api";
+import { getProject, parseRequirement, matchSources } from "@/lib/api";
 import { useParams } from "next/navigation";
 import DatasetExplorer from "@/components/DatasetExplorer";
 import React from "react";
@@ -14,6 +14,7 @@ export default function ProjectDetails() {
   const [prompt, setPrompt] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [requirement, setRequirement] = useState<any>(null);
+  const [compatibleSources, setCompatibleSources] = useState<any[]>([]);
 
   const loadHistory = async (token: string, projectId: string) => {
     try {
@@ -41,9 +42,16 @@ export default function ProjectDetails() {
     
     setIsAnalyzing(true);
     setRequirement(null);
+    setCompatibleSources([]);
     try {
       const parsed = await parseRequirement(token, parseInt(id), prompt);
       setRequirement(parsed);
+      
+      if (parsed.dataset_schema && parsed.dataset_schema.length > 0) {
+        const fields = parsed.dataset_schema.map((f: any) => f.name);
+        const matched = await matchSources(token, fields);
+        setCompatibleSources(matched);
+      }
     } catch (err) {
       alert("Failed to analyze requirement");
     } finally {
@@ -186,23 +194,6 @@ export default function ProjectDetails() {
               </div>
             </div>
             
-            {requirement.recommended_sources && (
-              <div className="bg-amber-50 dark:bg-zinc-900/50 border border-amber-200 dark:border-zinc-700 p-6 rounded-xl shadow-sm">
-                <h2 className="text-lg font-bold mb-4 text-amber-800 dark:text-amber-400">Selected Sources</h2>
-                <div className="flex flex-col gap-2">
-                  {requirement.recommended_sources.length > 0 ? (
-                    requirement.recommended_sources.map((src: string, idx: number) => (
-                      <div key={idx} className="bg-white dark:bg-zinc-950 p-3 rounded-lg border dark:border-zinc-800 flex items-center gap-3">
-                        <span className="text-green-500 font-bold">✓</span>
-                        <span className="font-semibold">{src}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-zinc-500 text-sm">No registered sources match this requirement.</div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="bg-blue-50 dark:bg-zinc-900/50 border border-blue-200 dark:border-zinc-700 p-8 rounded-xl shadow-sm">
@@ -236,6 +227,50 @@ export default function ProjectDetails() {
               </table>
             </div>
           </div>
+
+          {compatibleSources && compatibleSources.length > 0 ? (
+            <div className="bg-amber-50 dark:bg-zinc-900/50 border border-amber-200 dark:border-zinc-700 p-8 rounded-xl shadow-sm">
+              <h2 className="text-xl font-bold mb-4 text-amber-800 dark:text-amber-400">Compatible Sources</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {compatibleSources.map((src: any, idx: number) => (
+                  <div key={idx} className="bg-white dark:bg-zinc-950 p-6 rounded-lg border dark:border-zinc-800 shadow-sm flex flex-col gap-4">
+                    <div className="font-semibold text-lg border-b pb-2 dark:border-zinc-800">{src.name}</div>
+                    
+                    <div>
+                      <div className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Matched Fields:</div>
+                      {src.matched_fields.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {src.matched_fields.map((f: string, i: number) => (
+                            <span key={i} className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded border border-green-200 dark:border-green-800">✓ {f}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-zinc-500">None</div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Missing Fields:</div>
+                      {src.missing_fields.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {src.missing_fields.map((f: string, i: number) => (
+                            <span key={i} className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded border border-red-200 dark:border-red-800">✗ {f}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-zinc-500">None</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-amber-50 dark:bg-zinc-900/50 border border-amber-200 dark:border-zinc-700 p-8 rounded-xl shadow-sm">
+              <h2 className="text-xl font-bold mb-4 text-amber-800 dark:text-amber-400">Compatible Sources</h2>
+              <div className="text-zinc-500 text-sm">No compatible enabled sources found for this requirement.</div>
+            </div>
+          )}
           
           {/* AI GENERATED WORKFLOW SECTION */}
           {requirement.workflow && requirement.workflow.steps && (

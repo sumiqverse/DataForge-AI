@@ -31,7 +31,7 @@ export async function login(username: string, password: string) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: formData,
+    body: formData.toString(),
   });
   if (!res.ok) throw new Error("Login failed");
   return res.json();
@@ -138,6 +138,44 @@ export async function createSource(token: string, data: any) {
   if (!res.ok) throw new Error("Failed to create source");
   return res.json();
 }
+
+export async function updateSource(token: string, id: number, data: any) {
+  const res = await fetch(`${API_BASE}/api/sources/${id}`, {
+    method: "PUT",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}` 
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update source");
+  return res.json();
+}
+
+export async function deleteSource(token: string, id: number) {
+  const res = await fetch(`${API_BASE}/api/sources/${id}`, {
+    method: "DELETE",
+    headers: { 
+      Authorization: `Bearer ${token}` 
+    },
+  });
+  if (!res.ok) throw new Error("Failed to delete source");
+  return res.json();
+}
+
+export async function matchSources(token: string, fields: string[]) {
+  const res = await fetch(`${API_BASE}/api/sources/match`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error("Failed to match sources");
+  return res.json();
+}
+
 
 export async function runWorkflow(token: string, projectId: number, requirement: any) {
   const res = await fetch(`${API_BASE}/api/workflow/${projectId}/run`, {
